@@ -11,6 +11,7 @@ notebook.ipynb      Main Colab notebook — all 6 models, shared training/eval u
 scripts/
   prepare_data.py         Connects metadata.csv <-> derm_images/, builds train/val/test.csv
   dinov2_smoke_test.py    Local CPU smoke test for the DINOv2 pipeline (see below)
+  crop_borders.py         Optional: detect and crop black dermoscope borders from images
 README.md
 ```
 
@@ -106,6 +107,5 @@ This machine has an RTX 3060 but CPU-only PyTorch installed, so the smoke test i
 
 ## Known issues / follow-ups
 
-- **Section 2.4 ("Image Preprocessing Script")** is a standalone CLI script (argparse + `__main__` guard) pasted into a notebook cell. It isn't wired into the data pipeline and will error if run as-is in a notebook — leave it alone unless you're refactoring it into a real cell.
-- The intro cell's "Before you start" checklist references the old `bcn20000_data_preparation.py` workflow, which Cell 2.0 now replaces — worth a cleanup pass.
+- ~~Section 2.4 ("Image Preprocessing Script")~~ — moved to `scripts/crop_borders.py`. Run standalone if you want to pre-crop black borders before training (optional; the models handle uncropped images fine).
 - `data/` (generated CSVs) and `checkpoints/` (model checkpoints/results) are gitignored — they're regenerated/produced by running the notebook, not meant to be committed.
