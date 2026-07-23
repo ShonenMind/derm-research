@@ -128,8 +128,14 @@ def load_training_checkpoint(
     raw checkpoint dict so the caller can read epoch/best_metric/history/etc.
     Pass strict=False for adapter/only_trainable checkpoints, so the stored
     LoRA weights load over a base model whose other keys aren't in the file.
+
+    weights_only=False is required because these checkpoints intentionally
+    contain non-tensor Python objects (RNG state, numpy scalar metrics, the
+    history dict). PyTorch 2.6 made weights_only=True the default, which
+    rejects those. That default is a safeguard against untrusted pickles —
+    fine to disable here since we produced these checkpoints ourselves.
     """
-    ckpt = torch.load(path, map_location=map_location)
+    ckpt = torch.load(path, map_location=map_location, weights_only=False)
     # A checkpoint that only stored trainable params must load non-strictly.
     effective_strict = strict and not ckpt.get("only_trainable", False)
     if model is not None and ckpt.get("model_state_dict") is not None:
