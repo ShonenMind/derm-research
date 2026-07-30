@@ -52,12 +52,18 @@ def _capture_rng_state() -> dict:
     }
 
 
+def _to_cpu_byte(t):
+    """RNG states must be CPU ByteTensors. torch.load(map_location='cuda') can
+    move them onto the GPU, so force them back to the CPU before use."""
+    return t.cpu() if hasattr(t, "cpu") else t
+
+
 def _restore_rng_state(state: dict) -> None:
     random.setstate(state["python"])
     np.random.set_state(state["numpy"])
-    torch.set_rng_state(state["torch"])
+    torch.set_rng_state(_to_cpu_byte(state["torch"]))
     if state.get("torch_cuda") is not None and torch.cuda.is_available():
-        torch.cuda.set_rng_state_all(state["torch_cuda"])
+        torch.cuda.set_rng_state_all([_to_cpu_byte(s) for s in state["torch_cuda"]])
 
 
 def trainable_state_dict(model) -> dict:
@@ -147,7 +153,12 @@ def load_training_checkpoint(
     if scaler is not None and ckpt.get("scaler_state_dict") is not None:
         scaler.load_state_dict(ckpt["scaler_state_dict"])
     if restore_rng and ckpt.get("rng_state") is not None:
-        _restore_rng_state(ckpt["rng_state"])
+        # RNG restore is a nicety (reproducible shuffling/augmentation), not
+        # essential — never let it block a resume.
+        try:
+            _restore_rng_state(ckpt["rng_state"])
+        except Exception as e:  # pragma: no cover - defensive
+            print(f"  ⚠️  Could not restore RNG state ({e}); resuming without it.")
     return ckpt
 
 
